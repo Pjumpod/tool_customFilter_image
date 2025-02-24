@@ -9,25 +9,36 @@ import base64
 
 def custom_filter(img_to_find: ndarray):
     green_channel = img_to_find[:,:,1]
+    img_h, img_w, _ = img_to_find.shape
+    print(img_h, img_w)
+    varr = find_verticle_array(green_channel)
+    cutpoint_y = find_cut_point(varr)
+    cutpoint_x = find_horiz_point(green_channel[cutpoint_y])
+    mask = green_channel[cutpoint_y-10: cutpoint_y+ int(img_h/10), cutpoint_x -10 :cutpoint_x + int(img_w*3/5)]
+    # print(varr)
     histogram = {0:0}
-    for i in range(len(green_channel)):
-        for j in range(len(green_channel[i])):
-            if int(green_channel[i][j]) > 100:
+    for i in range(len(mask)):
+        for j in range(len(mask[i])):
+            if int(mask[i][j]) > 100:
                 try:
-                    histogram[int(green_channel[i][j])] += 1
+                    histogram[int(mask[i][j])] += 1
                 except:
-                    histogram[int(green_channel[i][j])] = 1
+                    histogram[int(mask[i][j])] = 1
     print(histogram)
     peak_color = keywithmaxval(histogram)
     print(peak_color)
     # overwrite the green channel to other channel for more evidance.
-    img_to_find[:,:,0] = img_to_find[:,:,1]
-    img_to_find[:,:,2] = img_to_find[:,:,1]
-    _, output = cv2.threshold(img_to_find, round(peak_color) + 25,255,cv2.THRESH_BINARY)
+    img_with_mask = img_to_find[cutpoint_y-10: cutpoint_y+ int(img_h/10), cutpoint_x -10 :cutpoint_x + int(img_w*3/5)]
+    img_with_mask[:,:,0] = img_with_mask[:,:,1]
+    img_with_mask[:,:,2] = img_with_mask[:,:,1]
+    _, output = cv2.threshold(img_with_mask, round(peak_color) + 25,255,cv2.THRESH_BINARY)
     
     # Save
-    cv2.imwrite(os.path.join(r"tmp", "tmp.png"), output)
-    return os.path.join(r"tmp", "tmp.png")
+    maskfile = os.path.join(r"tmp", "mask.png")
+    resultfile = os.path.join(r"tmp", "tmp.png")
+    cv2.imwrite(maskfile, mask)
+    cv2.imwrite(resultfile, output)
+    return maskfile, resultfile
 
 
 def decode_binary(input: str):
@@ -46,26 +57,51 @@ def open_picture(event):
         imglive.image = oiginal_picture
         imglive.update()
         image_to_filter = cv2.imread(ori_full_filepath, 3)
-        filter_image = custom_filter(image_to_filter)
+        filter_image, result_image = custom_filter(image_to_filter)
         filter_base64 = decode_binary(filter_image)
         filter_picture = tk.PhotoImage(data=bytes(filter_base64))
         imgfilter.config(image=filter_picture)
         imgfilter.image = filter_picture
+        result_base64 = decode_binary(result_image)
+        result_picture = tk.PhotoImage(data=bytes(result_base64))
+        imgresult.config(image=result_picture)
+        imgresult.image = result_picture
         imgfilter.update()
+        imgresult.update()
 
 
 def keywithmaxval(d):
     v = list(d.values())
     k = list(d.keys())
     return k[v.index(max(v))]
- 
+
+def find_verticle_array(arr):
+    return arr[:,0]
+
+def find_cut_point(arr):
+    i = 0
+    for value in arr:
+        if value > 100:
+            i += 1
+        else:
+            break
+    return i
+
+def find_horiz_point(arr):
+    i = 0
+    for value in arr:
+        if value < 100:
+            i += 1
+        else:
+            break
+    return i
 #######################################################3##
 #########################################################
 #######33                   Main
 #########################################################
 #######################################################3##
 root = tk.Tk()
-root.geometry('1500x600')
+root.geometry('1200x600')
 f_path = r"example"
 included_pic_extensions = ['.jpg', '.JPG', '.png', '.PNG']
 image_blank =  tk.PhotoImage(data=bytes(b'iVBORw0KGgoAAAANSUhEUgAAAB8AAAAgCAYAAADqgqNBAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAU0SURBVFhHrZZdaBRXFMd/d3Y3bnYys0kktexuEg3YBgwYESttffG9lT4VfNBIaykp+mIi5kFoixh9FT+IgX6khYbSvhhoHyqm5sEq2ooYvxYKajSGgtWd/Uq6mZnTB7PTnUnWxNgfXObec869/8vlzL1HsThq1apVsVAo1AisVEo1AitFxOsD5W+5r0Tkd+DQo0eP0sEFyyiARCLxDvB2lYWalFI1wYkLEYlE0HUd27bJ5/OIyLSIHJiamjoBSDBeJRKJ95VS31caQ6EQuq5jGAamaRKPx4nH49TH49TX11Pf0EBD4NvY2Iiu64TDYcR1ufDbb3z26adMPHgA8ItS6oOHDx9OVuqQTCZPJZNJSSaT8vVXX8mDiQnJZDJSKBRkZmZGZkslcWxbXNcVcV15Ef5+/Fg+6e6WZDIpiUTi70Qi8b5PPJVKDZbF161bJ7+OjgbXeCls25bh4WF5/bXXypv4trW1tR5ApVKpQRH5qLwZTdPo6elh7969aJrm2yiA4zgUi0VyuRzZbJZsNuv1g9/KfjqdJpfLlZe5D2ybJ15m9erVtLW1USwWsSyLXC5HJpNhenoax3GC4cvhu6rii6GUIhqNEovF0GMxdF1Hr6ujbq4ZhuFrpmGg6zpffPklly9fRkR+rCqu6zq7P/yQplde8S1gGAaGaWIaBuFIhFAohKZpXlNKeW0hTp8+zaFDhxCRH30JV9m6urqCufO/MDg4WE68H+Zn1ByRSCRoWhKO45BOp7ly5Qqjo6OcOXOGa9euBcMACAcN1Th79ixjY2NYlkUmk8GyLGKxGENDQ6xYscKL6+vrY3h42Bs3Nzdz4MABOjs7PVuZkGma7wIbg461a9eybds2AFzXpauri4sXL3Lz5k3u3bvH1NQUExMTuK7Lli1bvHkdHR1s6Ozkp59/RinFhQsXWL9+vZcDV69eZWxsDOBW1WOvRNM0zp07R29vb9DFwMAA169f98aJRILODRu8cU1NTdXkW5I4QDQapWaBPLBtm56eHkqlUtC1KEsWr6S2thbDMLzx7du3OX78uC9mKSxLPBaLsX//fp/txIkT3Lp1y2dbjGWJA+zYsYNNmzZ549nZWfbt24dt276457Fs8XA4zJEjR3y/2Y0bNzh58qQv7nksWxygvb2dPXv2+GzHjh0jna5aOfl4KXGA7u5u2tvbvXGpVOLgwYO+mGq8tHg0GuXo0aOEQiHPNjnpr5aqoeG68wq7F2Xjxo3s2rUraF4UDU37M2h8UZRS9Pb20tzcHHQ9Fy0SiXwDPA46FsKVZ4dULBYZGhrizp07ns8wDA4fPrxg6VUN7e7du3+FlfoIqFobiQg7d+6kv78fgJmZGfr7+xkZGfHFbd26lb6+PgzDoKmpie3bty94JQdRqVTqcGUxsXv3bq8AcBxHLl26JDfGx+X+/fvy9MkTyefz4jiOr1AQEXFdVwr5vBSLxWfldoCBgYF5xYSYpvm5grPl3cjcETP3qm3evJl1HR20tLRQ39CArusLHrFSipiuU1tb671mIsL09DSTk5OcP3/+v9iKebS2tr5q2/YloHXNmjWMjIxgmiaFQoFcLucrjZfaLMuiUCgwOztbKQXw9byHtqWl5S3bts8ppaJB3/+GyBMtFHpvnjjPSp+PXdc9tcgl5ADTQF4plQPySiSrlMqKUlnAUkpZImJpYKFpGcCKwNNa00yPj48/XVAc0NpaWt50RN4QpWbnJltAJgJWJBZ7qrtuISJS+qeuzrEsy4nH427bH3+4P4A7t8ail9e/a0xLDkORZUQAAAAASUVORK5CYII='), height=60, width=60)
@@ -80,6 +116,8 @@ filelist_optionmenu = tk.OptionMenu(root, fileselect, *list_of_files, command=op
 filelist_optionmenu.place(x=50, y=10)
 imglive = tk.Label(root, image=image_blank, borderwidth=2, justify='center', border=2, relief="solid", width=650, height=460)
 imglive.place(x=5, y=50)
-imgfilter = tk.Label(root, image=image_blank, borderwidth=2, justify='center', border=2, relief="solid", width=650, height=460)
+imgfilter = tk.Label(root, image=image_blank, borderwidth=2, justify='center', border=2, relief="solid", width=350, height=130)
 imgfilter.place(x=700, y=50)
+imgresult = tk.Label(root, image=image_blank, borderwidth=2, justify='center', border=2, relief="solid", width=350, height=130)
+imgresult.place(x=700, y=200)
 root.mainloop()
