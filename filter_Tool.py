@@ -8,20 +8,23 @@ import base64
 
 
 def custom_filter(img_to_find: ndarray):
-    # gray = cv2.convertScaleAbs(img_to_find, alpha=2, beta=-50)
-    # binary_img = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY_INV, 19, 1)
-    # print(img_to_find.shape)
-    """ # Search yellow algo
-    hsv = cv2.cvtColor(img_to_find, cv2.COLOR_BGR2HSV)
-    binary_img = img_to_find
-    lower = np.array([22, 20, 0])
-    upper = np.array([40, 130, 255])
-    binary_img = cv2.inRange(hsv, lower, upper) """
-    
+    green_channel = img_to_find[:,:,1]
+    histogram = {0:0}
+    for i in range(len(green_channel)):
+        for j in range(len(green_channel[i])):
+            if int(green_channel[i][j]) > 100:
+                try:
+                    histogram[int(green_channel[i][j])] += 1
+                except:
+                    histogram[int(green_channel[i][j])] = 1
+    print(histogram)
+    peak_color = keywithmaxval(histogram)
+    print(peak_color)
     # overwrite the green channel to other channel for more evidance.
     img_to_find[:,:,0] = img_to_find[:,:,1]
     img_to_find[:,:,2] = img_to_find[:,:,1]
-    _, output = cv2.threshold(img_to_find, 190,255,cv2.THRESH_BINARY)
+    _, output = cv2.threshold(img_to_find, round(peak_color) + 25,255,cv2.THRESH_BINARY)
+    
     # Save
     cv2.imwrite(os.path.join(r"tmp", "tmp.png"), output)
     return os.path.join(r"tmp", "tmp.png")
@@ -49,7 +52,13 @@ def open_picture(event):
         imgfilter.config(image=filter_picture)
         imgfilter.image = filter_picture
         imgfilter.update()
-    
+
+
+def keywithmaxval(d):
+    v = list(d.values())
+    k = list(d.keys())
+    return k[v.index(max(v))]
+ 
 #######################################################3##
 #########################################################
 #######33                   Main
