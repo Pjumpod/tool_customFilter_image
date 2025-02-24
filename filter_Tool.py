@@ -3,14 +3,26 @@ import tkinter as tk
 from PIL import ImageTk
 import os
 from numpy import ndarray
+import numpy as np
 import base64
 
 
 def custom_filter(img_to_find: ndarray):
-    gray = cv2.convertScaleAbs(img_to_find, alpha=2, beta=-50)
-    binary_img = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 19, 2)
-    # save
-    output = binary_img
+    # gray = cv2.convertScaleAbs(img_to_find, alpha=2, beta=-50)
+    # binary_img = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY_INV, 19, 1)
+    # print(img_to_find.shape)
+    """ # Search yellow algo
+    hsv = cv2.cvtColor(img_to_find, cv2.COLOR_BGR2HSV)
+    binary_img = img_to_find
+    lower = np.array([22, 20, 0])
+    upper = np.array([40, 130, 255])
+    binary_img = cv2.inRange(hsv, lower, upper) """
+    
+    # overwrite the green channel to other channel for more evidance.
+    img_to_find[:,:,0] = img_to_find[:,:,1]
+    img_to_find[:,:,2] = img_to_find[:,:,1]
+    _, output = cv2.threshold(img_to_find, 190,255,cv2.THRESH_BINARY)
+    # Save
     cv2.imwrite(os.path.join(r"tmp", "tmp.png"), output)
     return os.path.join(r"tmp", "tmp.png")
 
@@ -30,7 +42,7 @@ def open_picture(event):
         imglive.config(image=oiginal_picture)
         imglive.image = oiginal_picture
         imglive.update()
-        image_to_filter = cv2.imread(ori_full_filepath, 0)
+        image_to_filter = cv2.imread(ori_full_filepath, 3)
         filter_image = custom_filter(image_to_filter)
         filter_base64 = decode_binary(filter_image)
         filter_picture = tk.PhotoImage(data=bytes(filter_base64))
