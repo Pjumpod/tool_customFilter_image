@@ -14,7 +14,11 @@ def custom_filter(img_to_find: ndarray):
     varr = find_verticle_array(green_channel)
     cutpoint_y = find_cut_point(varr)
     cutpoint_x = find_horiz_point(green_channel[cutpoint_y])
-    mask = green_channel[cutpoint_y-10: cutpoint_y+ int(img_h/10), cutpoint_x -10 :cutpoint_x + int(img_w*3/5)]
+    start_y = cutpoint_y-15
+    end_y = cutpoint_y+ int(img_h/10)
+    start_x = cutpoint_x -20
+    end_x = cutpoint_x + int(img_w*3/5) + 20
+    mask = green_channel[start_y: end_y, start_x: end_x]
     # print(varr)
     histogram = {0:0}
     for i in range(len(mask)):
@@ -24,11 +28,11 @@ def custom_filter(img_to_find: ndarray):
                     histogram[int(mask[i][j])] += 1
                 except:
                     histogram[int(mask[i][j])] = 1
-    print(histogram)
+    # print(histogram)
     peak_color = keywithmaxval(histogram)
-    print(peak_color)
+    # print(peak_color)
     # overwrite the green channel to other channel for more evidance.
-    img_with_mask = img_to_find[cutpoint_y-10: cutpoint_y+ int(img_h/10), cutpoint_x -10 :cutpoint_x + int(img_w*3/5)]
+    img_with_mask = img_to_find[start_y: end_y, start_x: end_x]
     img_with_mask[:,:,0] = img_with_mask[:,:,1]
     img_with_mask[:,:,2] = img_with_mask[:,:,1]
     _, output = cv2.threshold(img_with_mask, round(peak_color) + 25,255,cv2.THRESH_BINARY)
@@ -116,8 +120,8 @@ filelist_optionmenu = tk.OptionMenu(root, fileselect, *list_of_files, command=op
 filelist_optionmenu.place(x=50, y=10)
 imglive = tk.Label(root, image=image_blank, borderwidth=2, justify='center', border=2, relief="solid", width=650, height=460)
 imglive.place(x=5, y=50)
-imgfilter = tk.Label(root, image=image_blank, borderwidth=2, justify='center', border=2, relief="solid", width=350, height=130)
+imgfilter = tk.Label(root, image=image_blank, borderwidth=2, justify='center', border=2, relief="solid", width=400, height=130)
 imgfilter.place(x=700, y=50)
-imgresult = tk.Label(root, image=image_blank, borderwidth=2, justify='center', border=2, relief="solid", width=350, height=130)
+imgresult = tk.Label(root, image=image_blank, borderwidth=2, justify='center', border=2, relief="solid", width=400, height=130)
 imgresult.place(x=700, y=200)
 root.mainloop()
