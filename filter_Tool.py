@@ -8,16 +8,22 @@ import base64
 
 
 def custom_filter(img_to_find: ndarray):
+    # Facet must be in the middle of picture in X axis.
     green_channel = img_to_find[:,:,1]
     img_h, img_w, _ = img_to_find.shape
     print(img_h, img_w)
-    varr = find_verticle_array(green_channel)
+    varr = find_verticle_array(green_channel, 0)
+    varr_mid = find_verticle_array(green_channel, int(img_w/2))
     cutpoint_y = find_cut_point(varr)
-    cutpoint_x = find_horiz_point(green_channel[cutpoint_y])
+    cutend_y = find_cut_point(varr_mid)
+    cutpoint_x, cutend_x = find_horiz_point(green_channel[cutpoint_y])
     start_y = cutpoint_y-15
-    end_y = cutpoint_y+ int(img_h/10)
+    end_y = cutend_y + 10
+    mid_y = int((start_y + end_y)/2)
+    cutpoint_x, cutend_x = find_horiz_point(green_channel[mid_y])
     start_x = cutpoint_x -20
-    end_x = cutpoint_x + int(img_w*3/5) + 20
+    end_x = cutend_x + 20
+    print(f"crop to [{start_y}: {end_y}, {start_x}: {end_x}]")
     mask = green_channel[start_y: end_y, start_x: end_x]
     # print(varr)
     histogram = {0:0}
@@ -79,8 +85,8 @@ def keywithmaxval(d):
     k = list(d.keys())
     return k[v.index(max(v))]
 
-def find_verticle_array(arr):
-    return arr[:,0]
+def find_verticle_array(arr, position: int):
+    return arr[:,position]
 
 def find_cut_point(arr):
     i = 0
@@ -93,12 +99,26 @@ def find_cut_point(arr):
 
 def find_horiz_point(arr):
     i = 0
+    hole_detected = False
     for value in arr:
         if value < 100:
+            hole_detected = True
             i += 1
         else:
-            break
-    return i
+            if hole_detected:
+                break
+    reverse_arr = arr[::-1]
+    j = 0
+    hole_detected = False
+    for value in reverse_arr:
+        if value < 100:
+            j += 1
+            hole_detected = True
+        else:
+            if hole_detected:
+                break
+    end_edge = len(arr) - j
+    return i, end_edge
 #######################################################3##
 #########################################################
 #######33                   Main
