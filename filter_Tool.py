@@ -11,7 +11,7 @@ def custom_filter(img_to_find: ndarray):
     # Facet must be in the middle of picture in X axis.
     green_channel = img_to_find[:,:,1]
     img_h, img_w, _ = img_to_find.shape
-    print(img_h, img_w)
+    print(f"image size {img_h}, {img_w}")
     varr = find_verticle_array(green_channel, 0)
     varr_mid = find_verticle_array(green_channel, int(img_w/2))
     cutpoint_y = find_cut_point(varr)
